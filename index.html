@@ -27,33 +27,6 @@
       <div class="container">
         <loading :active.sync="isLoading"></loading>
 
-        <!-- 表單驗證 -->
-        <validation-observer v-slot="{ invalid }" class="col-md-6">
-          <form>
-            <div class="form-group">
-              <validation-provider
-                v-slot="{ errors, classes }"
-                rules="required"
-              >
-                <label for="username">收件人姓名</label>
-                <input
-                  id="username"
-                  type="text"
-                  class="form-control"
-                  :class="classes"
-                />
-                <span v-if="errors[0]" class="text-danger"
-                  >{{ errors[0] }}</span
-                >
-              </validation-provider>
-            </div>
-            <div class="text-right">
-              <button type="submit" class="btn btn-primary" :disabled="invalid">
-                送出表單
-              </button>
-            </div>
-          </form>
-        </validation-observer>
         <!-- 產品列表 -->
         <div class="row">
           <div
@@ -151,6 +124,132 @@
             </table>
           </div>
         </div>
+
+        <!-- 表單驗證 -->
+        <div class="row justify-content-center mt-4">
+          <validation-observer v-slot="{invalid}" tag="div" class="col-6">
+            <form @submit="createOrder">
+              <!-- 姓名 -->
+              <div class="form-group">
+                <validation-provider rules="required" v-slot="{errors,classes}">
+                  <label for="username">收件人姓名</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    :class="classes"
+                    id="username"
+                    name="收件人姓名"
+                    aria-describedby="username"
+                    placeholder="請輸入收件人姓名"
+                    v-model="form.name"
+                  />
+                  <span class="text-danger"> {{errors[0]}} </span>
+                </validation-provider>
+              </div>
+              <!-- email -->
+              <div class="form-group">
+                <validation-provider
+                  rules="required|email"
+                  v-slot="{errors,classes}"
+                >
+                  <label for="email">Email</label>
+                  <input
+                    type="email"
+                    class="form-control"
+                    :class="classes"
+                    id="email"
+                    name="電子郵件"
+                    aria-describedby="email"
+                    placeholder="請輸入email"
+                    v-model="form.email"
+                  />
+                  <span class="text-danger"> {{errors[0]}} </span>
+                </validation-provider>
+              </div>
+              <!-- 電話 -->
+              <div class="form-group">
+                <validation-provider
+                  rules="required|min:8|numeric"
+                  v-slot="{errors,classes}"
+                >
+                  <label for="tel">電話</label>
+                  <input
+                    type="tel"
+                    class="form-control"
+                    :class="classes"
+                    id="tel"
+                    name="電話"
+                    aria-describedby="tel"
+                    placeholder="請輸入電話"
+                    v-model="form.tel"
+                  />
+                  <span class="text-danger"> {{errors[0]}} </span>
+                </validation-provider>
+              </div>
+              <!-- 地址 -->
+              <div class="form-group">
+                <validation-provider rules="required" v-slot="{errors,classes}">
+                  <label for="address">地址</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    :class="classes"
+                    id="address"
+                    name="地址"
+                    aria-describedby="address"
+                    placeholder="請輸入收件地址"
+                    v-model="form.address"
+                  />
+                  <span class="text-danger"> {{errors[0]}} </span>
+                </validation-provider>
+              </div>
+              <!-- 付款方式 -->
+              <div class="form-group">
+                <validation-provider rules="required" v-slot="{errors,classes}">
+                  <label for="payment">付款方式</label>
+                  <select
+                    name="付款方式"
+                    id="payment"
+                    class="form-control"
+                    :class="classes"
+                    v-model="form.payment"
+                  >
+                    <option value="" disabled>請選擇付款方式</option>
+                    <option value="WebATM">WebATM</option>
+                    <option value="ATM">ATM</option>
+                    <option value="Barcode">Barcode</option>
+                    <option value="Credit">Credit</option>
+                    <option value="ApplePay">ApplePay</option>
+                    <option value="GooglePay">GooglePay</option>
+                  </select>
+                  <span class="text-danger"> {{errors[0]}} </span>
+                </validation-provider>
+              </div>
+              <!-- 留言 -->
+              <div class="form-group">
+                <label for="message">留言</label>
+                <textarea
+                  name="message"
+                  id="message"
+                  class="form-control"
+                  cols="30"
+                  rows="3"
+                  placeholder="非必要"
+                  v-model="form.message"
+                ></textarea>
+              </div>
+              <div class="text-right">
+                <button
+                  type="submit"
+                  class="btn btn-primary"
+                  :disabled="invalid"
+                >
+                  送出
+                </button>
+              </div>
+            </form>
+          </validation-observer>
+        </div>
       </div>
     </div>
 
@@ -189,10 +288,10 @@
       VeeValidate.localize("tw", zh);
 
       Vue.component("loading", VueLoading);
-      // 將 VeeValidate input 驗證工具載入 作為全域註冊
-      Vue.component("ValidationProvider", VeeValidate.ValidationProvider);
-      // 將 VeeValidate 完整表單 驗證工具載入 作為全域註冊
-      Vue.component("ValidationObserver", VeeValidate.ValidationObserver);
+      // input 驗證
+      Vue.component("validation-provider", VeeValidate.ValidationProvider);
+      // form 驗證
+      Vue.component("validation-observer", VeeValidate.ValidationObserver);
 
       new Vue({
         el: "#app",
@@ -202,6 +301,14 @@
           products: [],
           cart: [],
           isLoading: false,
+          form: {
+            name: "",
+            email: "",
+            tel: "",
+            address: "",
+            payment: "",
+            message: "",
+          },
         },
         created() {
           this.getProducts();
@@ -237,6 +344,7 @@
               })
               .catch((err) => {
                 console.log(err.response.data.errors);
+                alert(err.response.data.errors);
               });
           },
           delAllCartItem() {
@@ -255,6 +363,19 @@
             axios
               .delete(api)
               .then((res) => {
+                this.getCart();
+              })
+              .catch((err) => {
+                console.log(err);
+              });
+          },
+          createOrder() {
+            this.isLoading = true;
+            const api = `${this.apiPath}api/${this.uuid}/ec/orders`;
+            axios
+              .post(api, this.form)
+              .then((res) => {
+                console.log(res);
                 this.getCart();
               })
               .catch((err) => {
