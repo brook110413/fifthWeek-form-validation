@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>商品列表</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.5.0/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/vue-loading-overlay@3.3.2/dist/vue-loading.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css"
+    />
+    <style>
+      [v-cloak] {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="container">
+        <loading :active.sync="isLoading"></loading>
+
+        <!-- 表單驗證 -->
+        <validation-provider rules="required|email" v-slot="{ errors }">
+          <!-- 輸入框 -->
+          <label for="email">Email</label>
+          <input id="email" type="email" name="email" class="form-control" />
+          <!-- 錯誤訊息 -->
+          <span>{{ errors[0] }}</span>
+        </validation-provider>
+        <!-- 產品列表 -->
+        <div class="row">
+          <div
+            class="col-4 mt-3"
+            v-for="item in products"
+            :key="item.id"
+            v-cloak
+          >
+            <div class="card">
+              <img :src="item.imageUrl[0]" class="card-img-top" alt="" />
+              <div class="card-body">
+                <h5 class="card-title">{{item.title}}</h5>
+                <p class="card-text">
+                  {{item.content}}
+                </p>
+                <div
+                  class="d-flex justify-content-between align-items-baseline"
+                >
+                  <del class="h5">原價 {{item.origin_price}}</del>
+                  <p class="h3">售價 {{item.price}}</p>
+                </div>
+              </div>
+              <div
+                class="card-footer text-muted d-flex justify-content-between"
+              >
+                <a href="#" class="btn btn-outline-secondary">詳細資料</a>
+                <a
+                  href="#"
+                  class="btn btn-primary"
+                  @click.prevent="addToCart(item)"
+                  >加入購物車</a
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 購物車 -->
+        <div class="row justify-content-center mt-4">
+          <div class="col-8">
+            <div class="text-right">
+              <button
+                type="button"
+                class="btn btn-outline-danger"
+                @click="delAllCartItem"
+              >
+                刪除所有品項
+              </button>
+            </div>
+            <table class="table mt-3">
+              <thead>
+                <tr>
+                  <th scope="col">品名</th>
+                  <th scope="col" width="120px" class="text-center">數量</th>
+                  <th scope="col">價格</th>
+                  <th scope="col">移除</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in cart" :key="item.product.id">
+                  <th scope="row">{{item.product.title}}</th>
+                  <td>
+                    <div class="input-group mb-3">
+                      <div class="input-group-prepend">
+                        <button
+                          class="btn btn-outline-success btn-sm"
+                          type="button"
+                        >
+                          <i class="fas fa-plus"></i>
+                        </button>
+                      </div>
+                      <input type="text" class="form-control" value="1" />
+                      <div class="input-group-prepend">
+                        <button
+                          class="btn btn-outline-success btn-sm"
+                          type="button"
+                        >
+                          <i class="fas fa-minus"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{item.product.price}}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="btn btn-outline-danger btn-sm"
+                      @click="delOneCartItem(item.product.id)"
+                    >
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js"
+      integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"
+      integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
+      crossorigin="anonymous"
+    ></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.2/axios.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue-loading-overlay@3.3.2/dist/vue-loading.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vee-validate/3.3.0/vee-validate.full.min.js"></script>
+
+    <script type="module">
+      import zh from "./zh_tw.js";
+      Vue.component("loading", VueLoading);
+      // 將 VeeValidate input 驗證工具載入 作為全域註冊
+      Vue.component("ValidationProvider", VeeValidate.ValidationProvider);
+      // 將 VeeValidate 完整表單 驗證工具載入 作為全域註冊
+      Vue.component("ValidationObserver", VeeValidate.ValidationObserver);
+
+      // 增加驗證樣式
+      VeeValidate.configure({
+        classes: {
+          valid: "is-valid",
+          invalid: "is-invalid",
+        },
+      });
+
+      // 載入中文錯誤提示
+      VeeValidate.localize("tw", zh);
+
+      new Vue({
+        el: "#app",
+        data: {
+          uuid: "069602ae-7e90-4b68-ab74-eede1d9ee78e",
+          apiPath: "https://course-ec-api.hexschool.io/",
+          products: [],
+          cart: [],
+          isLoading: false,
+        },
+        created() {
+          this.getProducts();
+          this.getCart();
+        },
+        methods: {
+          getProducts() {
+            this.isLoading = true;
+            const api = `${this.apiPath}api/${this.uuid}/ec/products`;
+            axios.get(api).then((res) => {
+              this.products = res.data.data;
+              this.isLoading = false;
+            });
+          },
+          getCart() {
+            this.isLoading = true;
+            const api = `${this.apiPath}api/${this.uuid}/ec/shopping`;
+            axios.get(api).then((res) => {
+              this.cart = res.data.data;
+              this.isLoading = false;
+            });
+          },
+          addToCart(item, quantity = 1) {
+            const api = `${this.apiPath}api/${this.uuid}/ec/shopping`;
+            const cart = {
+              product: item.id,
+              quantity,
+            };
+            axios
+              .post(api, cart)
+              .then((res) => {
+                this.getCart();
+              })
+              .catch((err) => {
+                console.log(err.response.data.errors);
+              });
+          },
+          delAllCartItem() {
+            const api = `${this.apiPath}api/${this.uuid}/ec/shopping/all/product`;
+            axios
+              .delete(api)
+              .then((res) => {
+                this.getCart();
+              })
+              .catch((err) => {
+                console.log(err);
+              });
+          },
+          delOneCartItem(id) {
+            const api = `${this.apiPath}api/${this.uuid}/ec/shopping/${id}`;
+            axios
+              .delete(api)
+              .then((res) => {
+                this.getCart();
+              })
+              .catch((err) => {
+                console.log(err);
+              });
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
