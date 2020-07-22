@@ -79,38 +79,46 @@
             <table class="table mt-3">
               <thead>
                 <tr>
-                  <th scope="col">品名</th>
-                  <th scope="col" width="120px" class="text-center">數量</th>
-                  <th scope="col">價格</th>
-                  <th scope="col">移除</th>
+                  <th scope="col" width="55%">品名</th>
+                  <th scope="col" width="15%" class="text-center">數量</th>
+                  <th scope="col" width="10%">價格</th>
+                  <th scope="col" width="10%">移除</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="item in cart" :key="item.product.id">
-                  <th scope="row">{{item.product.title}}</th>
-                  <td>
+                  <td class="align-middle" scope="row">
+                    {{item.product.title}}
+                  </td>
+                  <td class="align-middle">
                     <div class="input-group mb-3">
                       <div class="input-group-prepend">
                         <button
                           class="btn btn-outline-success btn-sm"
                           type="button"
+                          @click="quantityUpdate(item.product.id, item.quantity + 1)"
                         >
                           <i class="fas fa-plus"></i>
                         </button>
                       </div>
-                      <input type="text" class="form-control" value="1" />
+                      <input
+                        type="text"
+                        class="form-control text-center"
+                        :value="item.quantity"
+                      />
                       <div class="input-group-prepend">
                         <button
                           class="btn btn-outline-success btn-sm"
                           type="button"
+                          @click="quantityUpdate(item.product.id, item.quantity - 1)"
                         >
                           <i class="fas fa-minus"></i>
                         </button>
                       </div>
                     </div>
                   </td>
-                  <td>{{item.product.price}}</td>
-                  <td>
+                  <td class="align-middle">{{item.product.price | money}}</td>
+                  <td class="align-middle">
                     <button
                       type="button"
                       class="btn btn-outline-danger btn-sm"
@@ -121,6 +129,12 @@
                   </td>
                 </tr>
               </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2" class="text-right">總計</td>
+                  <td class="text-right">{{cartTotalPrice | money}}</td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -128,7 +142,7 @@
         <!-- 表單驗證 -->
         <div class="row justify-content-center mt-4">
           <validation-observer v-slot="{invalid}" tag="div" class="col-6">
-            <form @submit="createOrder">
+            <form @submit.prevent="createOrder">
               <!-- 姓名 -->
               <div class="form-group">
                 <validation-provider rules="required" v-slot="{errors,classes}">
@@ -250,6 +264,44 @@
             </form>
           </validation-observer>
         </div>
+
+        <!-- 送出訂單Modal -->
+        <div
+          class="modal fade"
+          id="createOrderModal"
+          tabindex="-1"
+          role="dialog"
+          aria-labelledby="exampleModalLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">訂單完成</h5>
+                <button
+                  type="button"
+                  class="close"
+                  data-dismiss="modal"
+                  aria-label="Close"
+                >
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                恭喜您！ 已完成訂單
+              </div>
+              <div class="modal-footer">
+                <button
+                  type="button"
+                  class="btn btn-secondary"
+                  data-dismiss="modal"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -293,6 +345,12 @@
       // form 驗證
       Vue.component("validation-observer", VeeValidate.ValidationObserver);
 
+      Vue.filter("money", (num) => {
+        let parts = num.toString().split(".");
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return "$" + parts.join(".");
+      });
+
       new Vue({
         el: "#app",
         data: {
@@ -300,6 +358,7 @@
           apiPath: "https://course-ec-api.hexschool.io/",
           products: [],
           cart: [],
+          cartTotalPrice: 0,
           isLoading: false,
           form: {
             name: "",
@@ -328,10 +387,14 @@
             const api = `${this.apiPath}api/${this.uuid}/ec/shopping`;
             axios.get(api).then((res) => {
               this.cart = res.data.data;
+              this.cart.forEach((item) => {
+                this.cartTotalPrice += item.product.price;
+              });
               this.isLoading = false;
             });
           },
           addToCart(item, quantity = 1) {
+            this.isLoading = true;
             const api = `${this.apiPath}api/${this.uuid}/ec/shopping`;
             const cart = {
               product: item.id,
@@ -340,6 +403,7 @@
             axios
               .post(api, cart)
               .then((res) => {
+                console.log(res);
                 this.getCart();
               })
               .catch((err) => {
@@ -347,7 +411,24 @@
                 alert(err.response.data.errors);
               });
           },
+          quantityUpdate(id, num) {
+            this.isLoading = true;
+            const api = `${this.apiPath}api/${this.uuid}/ec/shopping`;
+            const data = {
+              product: id,
+              quantity: num,
+            };
+            axios
+              .patch(api, data)
+              .then((res) => {
+                this.getCart();
+              })
+              .catch((err) => {
+                console.log(err);
+              });
+          },
           delAllCartItem() {
+            this.isLoading = true;
             const api = `${this.apiPath}api/${this.uuid}/ec/shopping/all/product`;
             axios
               .delete(api)
@@ -359,6 +440,7 @@
               });
           },
           delOneCartItem(id) {
+            this.isLoading = true;
             const api = `${this.apiPath}api/${this.uuid}/ec/shopping/${id}`;
             axios
               .delete(api)
@@ -375,8 +457,9 @@
             axios
               .post(api, this.form)
               .then((res) => {
-                console.log(res);
                 this.getCart();
+                $("#createOrderModal").modal("show");
+                this.cartTotalPrice = 0;
               })
               .catch((err) => {
                 console.log(err);
